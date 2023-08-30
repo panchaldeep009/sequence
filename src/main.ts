@@ -38,7 +38,9 @@ const sketch = (p5: P5) => {
         takenPlayer,
       } = boardCard;
       p5.fill(255);
+
       p5.stroke(0);
+
       p5.strokeWeight(6);
 
       p5.rect(
@@ -47,6 +49,18 @@ const sketch = (p5: P5) => {
         cardSizeHeight,
         cardSizeWidth
       );
+
+      if (board.activePlayer.hasCard(card)) {
+        p5.stroke(board.activePlayer.color);
+        p5.strokeWeight(4);
+        p5.fill(0, 0);
+        p5.rect(
+          column * cardSizeHeight + 4,
+          row * cardSizeWidth + 4,
+          cardSizeHeight - 8,
+          cardSizeWidth - 8
+        );
+      }
 
       p5.stroke(0, 0);
       p5.fill(0);
@@ -90,8 +104,6 @@ const sketch = (p5: P5) => {
   p5.mouseClicked = () => {
     const y = Math.floor(p5.mouseX / cardSizeHeight);
     const x = Math.floor(p5.mouseY / cardSizeWidth);
-
-    console.log(x, y);
 
     board.playCard(x, y);
   };

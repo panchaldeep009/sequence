@@ -1,5 +1,6 @@
 import { Card } from "./Card";
 import { Deck } from "./Deck";
+import { WildCard } from "./WildCard";
 
 export class Player {
   private currentCards: Card[] = [];
@@ -15,13 +16,18 @@ export class Player {
     );
 
     this.currentCards.push(deck.popCard()!);
+  }
 
-    console.log("player", this.color, this.currentCards);
+  hasCard(card: Card | WildCard) {
+    return this.currentCards.some(
+      (c) =>
+        !(card instanceof WildCard) &&
+        c.rank === card.rank &&
+        c.suite === card.suite
+    );
   }
 
   drawCards(deck: Deck) {
-    console.log("player", this.color, this.currentCards);
-
     if (this.currentCards.length === 5) {
       return;
     }
