@@ -1,30 +1,17 @@
 import { BoardCard } from "./BoardCard";
+import { Coordinate, hasMatchingPosition } from "./Cordinate";
 import { Deck } from "./Deck";
 import { Player } from "./Player";
+import { Sequence } from "./Sequence";
+import { Team } from "./Team";
 import { WildCard } from "./WildCard";
-
-/**
- * A Sequence is 5 cards in a row
- */
-class Sequence {
-  constructor(
-    //board: Board,
-    readonly cards: BoardCard[]
-  ) {
-    //  TODO: validate that sequence at most only overlaps with 1 card of another sequence from the board
-  }
-}
-
-type Coordinate = [number, number];
-
-const hasMatchingPosition = (p1: Coordinate, p2: Coordinate): boolean =>
-  p1[0] === p2[0] && p1[1] === p2[1];
 
 export class Board {
   public readonly cards: BoardCard[] = [];
   public readonly deck = new Deck([...new Deck().cards, ...new Deck().cards]);
-  public activePlayerIndex = 0;
-  public sequences: Sequence[] = [];
+  private activePlayerIndex = 0;
+
+  private sequences: Map<Team, Sequence[]> = new Map();
 
   get activePlayer() {
     const player = this.players[this.activePlayerIndex];
@@ -62,13 +49,15 @@ export class Board {
   }
 
   playCard(x: number, y: number) {
-    const boardCard = this.cards.find(({ card, position, takenPlayer }) => {
-      if (card instanceof WildCard) {
-        return false;
-      }
+    const boardCard = this.cards.find(
+      ({ card, position, team: takenPlayer }) => {
+        if (card instanceof WildCard) {
+          return false;
+        }
 
-      return card && position[0] === x && position[1] === y && !takenPlayer;
-    });
+        return card && position[0] === x && position[1] === y && !takenPlayer;
+      }
+    );
 
     const { card } = boardCard || {};
 
@@ -89,192 +78,103 @@ export class Board {
     }
 
     this.activePlayer.playCard(card, this.deck);
-    boardCard.takenPlayer = this.activePlayer;
-    // const sequenceFound = this.checkSequence();
-    const sequenceFound = this.checkForSequence();
+    boardCard.team = this.activePlayer.team;
+    const activeTeamSequences = this.checkForSequence();
 
+    const sequencesRequired = [3, 6, 8, 9].includes(this.players.length)
+      ? 1
+      : 2;
+
+    if (activeTeamSequences.length >= sequencesRequired) {
+      console.log("WINNER", this.activePlayer.team.color);
+      return;
+    }
+
+    this.nextTurn();
+  }
+
+  nextTurn() {
     this.activePlayerIndex = (this.activePlayerIndex + 1) % this.players.length;
   }
 
-  /**
-   * For the active player, check if they have established a new 5 card sequence.
-   */
-  checkForSequence(): boolean {
-    const activePlayerCards = this.cards.filter((card) => {
-      if (card instanceof WildCard) {
-        return false;
-      }
-      const { takenPlayer } = card;
-      return takenPlayer === this.activePlayer;
+  checkForSequence() {
+    const activePlayerCards = this.cards.filter((boardCard) => {
+      const { team, card } = boardCard;
+      return team === this.activePlayer.team || card instanceof WildCard;
     });
 
     const sequenceFromVector = (
-      card: BoardCard,
-      vector: Coordinate,
-      count: number = 1
+      cardsInSequence: BoardCard[],
+      vector: Coordinate
     ): Sequence | null => {
+      if (cardsInSequence.length === 5) {
+        return new Sequence(cardsInSequence);
+      }
+
+      const lastCard = cardsInSequence[cardsInSequence.length - 1];
+
+      if (!lastCard) {
+        return null;
+      }
+
       const nextCardPosition: Coordinate = [
-        card.position[0] + vector[0],
-        card.position[1] + vector[1],
+        lastCard.position[0] + vector[0],
+        lastCard.position[1] + vector[1],
       ];
+
       const nextSequenceCard = activePlayerCards.find((card) =>
         hasMatchingPosition(card.position, nextCardPosition)
       );
+
+      if (nextSequenceCard) {
+        return sequenceFromVector(
+          [...cardsInSequence, nextSequenceCard],
+          vector
+        );
+      }
+
       return null;
     };
 
-    activePlayerCards.forEach((currentCard) => {
-      const [row, column] = currentCard.position;
-
-      const nearbyCardPositions = [
-        [row, column + 1],
-        [row, column - 1],
-        [row + 1, column],
-        [row - 1, column],
-        [row + 1, column + 1],
-        [row - 1, column - 1],
-        [row + 1, column - 1],
-        [row - 1, column + 1],
+    const sequences = activePlayerCards.reduce((currentSequences, card) => {
+      const vectors: Coordinate[] = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1],
       ];
 
-      const nearbyPlayerCards = activePlayerCards.filter((card) => {
-        return nearbyCardPositions.some(([row, column]) => {
-          return card.position[0] === row && card.position[1] === column;
-        });
-      });
+      const cardSequences = vectors
+        .map((vector) => sequenceFromVector([card], vector))
+        .filter((sequence): sequence is Sequence => sequence !== null);
 
-      nearbyPlayerCards.forEach((nearbyCard) => {
-        // const vector = [nearbyCard.position[0] - row, nearbyCard.position[1] - column]
-        const directionX = nearbyCard.position[0] - row;
-        const directionY = nearbyCard.position[1] - column;
+      return [...currentSequences, ...cardSequences];
+    }, [] as Sequence[]);
 
-        const nextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nearbyCard.position[0] + directionX &&
-            card.position[1] === nearbyCard.position[1] + directionY
+    const validateSequence = sequences.reduce((currentSequences, sequence) => {
+      const overlappingSequences = currentSequences.filter(
+        (currentSequence) => {
+          const overlappingCards = sequence.cards.filter((card) =>
+            currentSequence.cards.find((sequenceCard) =>
+              hasMatchingPosition(card.position, sequenceCard.position)
+            )
           );
-        });
 
-        if (!nextCard) {
-          return;
+          return overlappingCards.length > 1;
         }
+      );
 
-        const nextToNextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nextCard.position[0] + directionX &&
-            card.position[1] === nextCard.position[1] + directionY
-          );
-        });
-
-        if (!nextToNextCard) {
-          return;
-        }
-
-        const nextToNextToNextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nextToNextCard.position[0] + directionX &&
-            card.position[1] === nextToNextCard.position[1] + directionY
-          );
-        });
-
-        if (!nextToNextToNextCard) {
-          return;
-        }
-
-        // A sequence of 5 cards has been identified, store it!
-        this.sequences.push(
-          new Sequence([
-            currentCard,
-            nearbyCard,
-            nextCard,
-            nextToNextCard,
-            nextToNextToNextCard,
-          ])
-        );
-      });
-    });
-
-    return false;
-  }
-
-  checkSequence() {
-    const activePlayerCards = this.cards.filter(({ takenPlayer }) => {
-      return takenPlayer === this.activePlayer;
-    });
-
-    activePlayerCards.forEach((currentCard) => {
-      if (currentCard.card instanceof WildCard) {
-        return;
+      if (overlappingSequences.length > 0) {
+        return currentSequences;
       }
 
-      const [row, column] = currentCard.position;
+      return [...currentSequences, sequence];
+    }, [] as Sequence[]);
 
-      const nearbyCardPositions = [
-        [row, column + 1],
-        [row, column - 1],
-        [row + 1, column],
-        [row - 1, column],
-        [row + 1, column + 1],
-        [row - 1, column - 1],
-        [row + 1, column - 1],
-        [row - 1, column + 1],
-      ];
+    this.sequences.set(this.activePlayer.team, validateSequence);
 
-      const nearbyPlayerCards = activePlayerCards.filter((card) => {
-        return nearbyCardPositions.some(([row, column]) => {
-          return card.position[0] === row && card.position[1] === column;
-        });
-      });
+    console.log("SEQUENCES", validateSequence);
 
-      nearbyPlayerCards.forEach((nearbyCard) => {
-        // const vector = [nearbyCard.position[0] - row, nearbyCard.position[1] - column]
-        const directionX = nearbyCard.position[0] - row;
-        const directionY = nearbyCard.position[1] - column;
-
-        const nextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nearbyCard.position[0] + directionX &&
-            card.position[1] === nearbyCard.position[1] + directionY
-          );
-        });
-
-        if (!nextCard) {
-          return;
-        }
-
-        const nextToNextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nextCard.position[0] + directionX &&
-            card.position[1] === nextCard.position[1] + directionY
-          );
-        });
-
-        if (!nextToNextCard) {
-          return;
-        }
-
-        const nextToNextToNextCard = activePlayerCards.find((card) => {
-          return (
-            card.position[0] === nextToNextCard.position[0] + directionX &&
-            card.position[1] === nextToNextCard.position[1] + directionY
-          );
-        });
-
-        if (!nextToNextToNextCard) {
-          return;
-        }
-
-        // A sequence of 5 cards has been identified, store it!
-        this.sequences.push(
-          new Sequence([
-            currentCard,
-            nearbyCard,
-            nextCard,
-            nextToNextCard,
-            nextToNextToNextCard,
-          ])
-        );
-      });
-    });
+    return validateSequence;
   }
 }

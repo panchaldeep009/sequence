@@ -1,11 +1,11 @@
 import { Card } from "./Card";
-import { Player } from "./Player";
+import { Team } from "./Team";
 import { WildCard } from "./WildCard";
 
 export class BoardCard {
   constructor(
     public readonly card: Card | WildCard,
     public readonly position: [number, number],
-    public takenPlayer: Player | null = null
+    public team: Team | null = null
   ) {}
 }

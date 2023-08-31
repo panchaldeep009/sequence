@@ -1,10 +1,11 @@
 import { Card } from "./Card";
 import { Deck } from "./Deck";
+import { Team } from "./Team";
 import { WildCard } from "./WildCard";
 
 export class Player {
   private currentCards: Card[] = [];
-  constructor(public readonly color: string) {}
+  constructor(public readonly team: Team) {}
 
   getCurrentCards() {
     return this.currentCards;

@@ -1,8 +1,8 @@
 import { Board } from "./Board";
 import { Player } from "./Player";
 import { Suite } from "./Suite";
+import { Team } from "./Team";
 import { WildCard } from "./WildCard";
-import "./style.css";
 import P5 from "p5";
 
 const REAL_CARD_SIZE = {
@@ -15,9 +15,11 @@ const CARD_DIMENSIONS_RATIO = REAL_CARD_SIZE.HEIGHT / REAL_CARD_SIZE.WIDTH;
 const cardSizeWidth = document.body.clientHeight / 10;
 const cardSizeHeight = cardSizeWidth * CARD_DIMENSIONS_RATIO;
 
-const sketch = (p5: P5) => {
-  const player1 = new Player("blue");
-  const player2 = new Player("green");
+const gameSketch = (p5: P5) => {
+  const blueTeam = new Team("blue");
+  const greenTeam = new Team("green");
+  const player1 = new Player(blueTeam);
+  const player2 = new Player(greenTeam);
   const board = new Board([player1, player2]);
 
   p5.setup = () => {
@@ -35,7 +37,7 @@ const sketch = (p5: P5) => {
       const {
         card,
         position: [row, column],
-        takenPlayer,
+        team: takenPlayer,
       } = boardCard;
       p5.fill(255);
 
@@ -51,14 +53,15 @@ const sketch = (p5: P5) => {
       );
 
       if (board.activePlayer.hasCard(card)) {
-        p5.stroke(board.activePlayer.color);
+        p5.stroke(board.activePlayer.team.color);
         p5.strokeWeight(4);
         p5.fill(0, 0);
+        const margin = 6;
         p5.rect(
-          column * cardSizeHeight + 4,
-          row * cardSizeWidth + 4,
-          cardSizeHeight - 8,
-          cardSizeWidth - 8
+          column * cardSizeHeight + margin,
+          row * cardSizeWidth + margin,
+          cardSizeHeight - margin * 2,
+          cardSizeWidth - margin * 2
         );
       }
 
@@ -109,4 +112,8 @@ const sketch = (p5: P5) => {
   };
 };
 
-new P5(sketch);
+// new P5(gameSketch);
+
+export const Game = () => {
+  return <div id="game"></div>;
+};
