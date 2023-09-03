@@ -114,6 +114,6 @@ const gameSketch = (p5: P5) => {
 
 // new P5(gameSketch);
 
-export const Game = () => {
+export const Game: React.FC<{ connection: Peer }> = ({ roomId }) => {
   return <div id="game"></div>;
 };
