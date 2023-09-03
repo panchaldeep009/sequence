@@ -10,8 +10,4 @@ export const teamSchema = z
 
 export class Team {
   constructor(public readonly color: string) {}
-
-  static parse(object: Object): Team {
-    return new Team(teamSchema.parse(object).color);
-  }
 }

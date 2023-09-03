@@ -1,10 +1,13 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Guest } from "../Guest";
 
-export const GuestRoom: React.FC<{ roomId: string }> = ({ roomId }) => {
-  const guest = useMemo<Guest>(() => new Guest(roomId), [roomId]);
+const guest = new Guest();
+guest.events.on("teams", ({ teams }) => console.log(teams));
 
+export const GuestRoom: React.FC<{ roomId: string }> = ({ roomId }) => {
   useEffect(() => {
+    guest.connect(roomId);
+
     return () => {
       guest.destroy();
     };
