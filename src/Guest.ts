@@ -1,9 +1,11 @@
 import Peer, { DataConnection } from "peerjs";
 import { v4 } from "uuid";
+import { ConnectionEventManager, eventSchema } from "./EventManager";
 
 export class Guest {
   public peer: Peer;
   private connection: DataConnection | null = null;
+  public readonly events = new ConnectionEventManager();
 
   constructor(hostId: string) {
     const guestId =
@@ -12,30 +14,18 @@ export class Guest {
 
     this.peer = new Peer(guestId);
 
-    this.peer.on("open", (id) => {
-      console.log("Guest peer open", id);
+    this.peer.on("open", () => {
       this.connection = this.peer.connect(hostId);
 
       this.connection.on("open", () => {
-        console.log("Guest connection open");
         if (!this.connection) {
           return;
         }
 
-        this.connection.send("Hello from guest");
-
         this.connection.on("data", (data) => {
-          console.log("Guest connection data", data);
+          this.events.emit(data);
         });
       });
-
-      this.connection.on("error", (error) => {
-        console.log("Guest connection error", error);
-      });
-    });
-
-    this.peer.on("error", (error) => {
-      console.log("Guest peer error", error);
     });
   }
 
@@ -52,6 +42,10 @@ export class Guest {
       return;
     }
 
-    this.connection.send("ping");
+    this.connection.send(
+      eventSchema.parse({
+        type: "ping",
+      })
+    );
   }
 }
