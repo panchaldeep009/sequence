@@ -2,20 +2,31 @@ import { useState } from "react";
 import { GuestRoom } from "./GuestRoom";
 import { Team } from "../Team";
 import { HostRoom } from "./HostRoom";
+import { useHostStore } from "../store/Host";
+import { useGuestStore } from "../store/Guest";
 
 const Teams = [new Team("blue"), new Team("green"), new Team("red")];
 
 export const App: React.FC = () => {
-  const [isHosting, setIsHosting] = useState<boolean>();
   const [selectedTeams, setSelectedTeams] = useState<Team[]>([]);
   const [roomId, setRoomId] = useState<string>();
 
-  if (isHosting === true && selectedTeams.length > 0) {
-    return <HostRoom teams={selectedTeams} />;
+  const { createHost, host } = useHostStore(({ createHost, host }) => ({
+    createHost,
+    host,
+  }));
+
+  const { createGuest, guest } = useGuestStore(({ createGuest, guest }) => ({
+    createGuest,
+    guest,
+  }));
+
+  if (host) {
+    return <HostRoom />;
   }
 
-  if (isHosting === false && roomId) {
-    return <GuestRoom roomId={roomId} />;
+  if (guest) {
+    return <GuestRoom />;
   }
 
   return (
@@ -46,7 +57,7 @@ export const App: React.FC = () => {
             return;
           }
 
-          setIsHosting(true);
+          createHost(selectedTeams);
         }}
       >
         Host Game
@@ -62,7 +73,8 @@ export const App: React.FC = () => {
           if (!roomId) {
             return;
           }
-          setIsHosting(false);
+
+          createGuest(roomId);
         }}
       >
         Join Room

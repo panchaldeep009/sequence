@@ -1,24 +1,38 @@
-import { useEffect } from "react";
-import { Guest } from "../Guest";
+import { useGuestStore } from "../store/Guest";
+import { useUnmount } from "react-use";
 
-const guest = new Guest();
-guest.events.on("teams", ({ teams }) => console.log(teams));
+export const GuestRoom: React.FC = () => {
+  const { teams, destroyGuest, send, roomId } = useGuestStore(
+    ({ teams, destroyGuest, send, roomId }) => ({
+      teams,
+      destroyGuest,
+      send,
+      roomId,
+    })
+  );
 
-export const GuestRoom: React.FC<{ roomId: string }> = ({ roomId }) => {
-  useEffect(() => {
-    guest.connect(roomId);
-
-    return () => {
-      guest.destroy();
-    };
-  }, [guest]);
+  useUnmount(destroyGuest);
 
   return (
     <div>
       <p>Room</p>
       <strong>Id: </strong> {roomId}
       <br />
-      <button onClick={() => guest.ping()}>Ping</button>
+      <strong>Teams: </strong>
+      <ul>
+        {teams.map((team) => (
+          <li key={team.color}>{team.color}</li>
+        ))}
+      </ul>
+      <button
+        onClick={() =>
+          send({
+            type: "ping",
+          })
+        }
+      >
+        Ping
+      </button>
     </div>
   );
 };

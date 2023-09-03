@@ -10,6 +10,12 @@ export const pingEvent = z.object({
   type: z.literal("ping"),
 });
 
+export const hostEventSchema = z.union([teamSyncEvent, pingEvent]);
+export type HostEvent = z.infer<typeof hostEventSchema>;
+
+export const guestEventSchema = pingEvent;
+export type GuestEvent = z.infer<typeof guestEventSchema>;
+
 export const eventSchema = z.union([teamSyncEvent, pingEvent]);
 
 export type Event = z.infer<typeof eventSchema>;
